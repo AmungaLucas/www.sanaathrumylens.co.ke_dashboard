@@ -42,7 +42,7 @@ export async function generateToken(userId, userType, role) {
     const payload = {
         userId,  // Now this will be a UUID string
         userType,
-        role: role?.toLowerCase(),
+        role,
         exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
         iat: Math.floor(Date.now() / 1000)
     };

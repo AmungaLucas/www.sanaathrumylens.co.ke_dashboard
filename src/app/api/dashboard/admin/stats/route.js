@@ -16,12 +16,13 @@ export async function GET() {
             (SELECT COUNT(*) FROM blogs) as total_posts,
             (SELECT COUNT(*) FROM events) as total_events,
             (SELECT COUNT(*) FROM comments) as total_comments,
-            (SELECT SUM(view_count) FROM blogs) as total_views,
-            (SELECT SUM(like_count) FROM blogs) as total_likes,
+            (SELECT COALESCE(SUM(view_count), 0) FROM blogs) as total_views,
+            (SELECT COALESCE(SUM(like_count), 0) FROM blogs) as total_likes,
             (SELECT COUNT(*) FROM comments WHERE status = 'PENDING') as pending_comments,
-            (SELECT COUNT(*) FROM content_reports WHERE status = 'PENDING') as pending_reports,
-            (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE MONTH(created_at) = MONTH(NOW())) as monthly_revenue,
-            (SELECT COUNT(*) FROM subscriptions WHERE status = 'ACTIVE') as active_subscriptions
+            (SELECT COUNT(*) FROM content_reports WHERE status = 'PENDING') as pending_reports
     `);
+    // payments and subscriptions tables not yet implemented
+    stats.monthly_revenue = 0;
+    stats.active_subscriptions = 0;
     return NextResponse.json(stats);
 }

@@ -20,7 +20,26 @@ export async function GET() {
 
     const result = {};
     settings.forEach(s => {
-        result[s.setting_key] = JSON.parse(s.setting_value);
+        try {
+            const parsed = JSON.parse(s.setting_value);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                // Extract the actual value from wrapped formats:
+                // {"value": "Sanaa"} → "Sanaa"
+                // {"enabled": false} → false
+                // {"enabled": false, "message": "..."} → {"enabled": false, "message": "..."} (complex, keep as-is)
+                if ('value' in parsed && Object.keys(parsed).length <= 2) {
+                    result[s.setting_key] = parsed.value;
+                } else if ('enabled' in parsed && Object.keys(parsed).length === 1) {
+                    result[s.setting_key] = parsed.enabled;
+                } else {
+                    result[s.setting_key] = parsed;
+                }
+            } else {
+                result[s.setting_key] = parsed;
+            }
+        } catch {
+            result[s.setting_key] = s.setting_value;
+        }
     });
 
     // Default values if not set
