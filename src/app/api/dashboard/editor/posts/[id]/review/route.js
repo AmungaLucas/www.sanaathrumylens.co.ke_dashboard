@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 export async function POST(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
     const { action, feedback, feedback_type } = await request.json();
 
     if (!token) {

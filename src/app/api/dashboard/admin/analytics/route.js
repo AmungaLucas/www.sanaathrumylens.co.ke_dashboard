@@ -62,20 +62,8 @@ export async function GET(request) {
         GROUP BY source
     `, [days]);
 
-    // Revenue data (placeholder - implement when payments are added)
-    let revenueData = [];
-    try {
-        revenueData = await query(`
-            SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COALESCE(SUM(amount), 0) as revenue
-            FROM payments
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-            ORDER BY month ASC
-        `);
-    } catch (error) {
-        // payments table not yet implemented
-        revenueData = [];
-    }
+    // Revenue data (placeholder - implement when payments table is added)
+    const revenueData = [];
 
     // Top performing posts
     const topPosts = await query(`

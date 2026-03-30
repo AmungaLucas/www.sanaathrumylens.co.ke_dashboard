@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 export async function PUT(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
     const { name, email, role, status, password } = await request.json();
 
     if (!token) {
@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
 
     if (!token) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 export async function PUT(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
     const { scheduled_date, title, status, author_id, notes } = await request.json();
 
     if (!token) {
@@ -46,7 +46,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
 
     if (!token) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

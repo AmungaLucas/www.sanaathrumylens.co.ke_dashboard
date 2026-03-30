@@ -7,7 +7,7 @@ import { unlink } from 'fs/promises';
 export async function DELETE(request, { params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = params;
+    const { id } = await params;
 
     if (!token) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
