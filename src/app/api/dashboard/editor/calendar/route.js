@@ -3,11 +3,12 @@ import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/db';
 
-export async function PUT(request, { params }) {
+export async function GET(request) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { id } = await params;
-    const { scheduled_date, title, status, author_id, notes } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const year = parseInt(searchParams.get('year')) || new Date().getFullYear();
+    const month = parseInt(searchParams.get('month')) || new Date().getMonth() + 1;
 
     if (!token) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,49 +19,74 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (scheduled_date) {
-        await query(`UPDATE blogs SET scheduled_for = ? WHERE id = ?`, [scheduled_date, id]);
+    const posts = await query(`
+        SELECT
+            b.id, b.title, b.slug, b.status, b.author_id,
+            DATE(b.scheduled_for) as scheduled_date,
+            b.scheduled_for,
+            a.name as author_name
+        FROM blogs b
+        JOIN admin_users a ON b.author_id = a.id
+        WHERE (b.status = 'SCHEDULED' OR b.status = 'PUBLISHED')
+          AND b.scheduled_for IS NOT NULL
+          AND YEAR(b.scheduled_for) = ?
+          AND MONTH(b.scheduled_for) = ?
+        ORDER BY b.scheduled_for ASC
+    `, [year, month]);
+
+    // Try to add notes from editorial_calendar if table exists
+    try {
+        for (const post of posts) {
+            const [cal] = await query(`SELECT notes FROM editorial_calendar WHERE blog_id = ?`, [post.id]);
+            if (cal) post.notes = cal.notes;
+        }
+    } catch {
+        // editorial_calendar table may not exist, continue without notes
     }
-    if (title) {
-        await query(`UPDATE blogs SET title = ?, slug = ? WHERE id = ?`, [title, title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), id]);
+
+    return NextResponse.json(posts);
+}
+
+export async function POST(request) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    const body = await request.json();
+    const { title, scheduled_date, author_id, status, notes } = body;
+
+    if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (status) {
-        await query(`UPDATE blogs SET status = ? WHERE id = ?`, [status, id]);
+
+    const decoded = await verifyToken(token);
+    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    if (author_id !== undefined) {
-        await query(`UPDATE blogs SET author_id = ? WHERE id = ?`, [author_id, id]);
+
+    if (!title || !scheduled_date) {
+        return NextResponse.json({ error: 'Missing required fields: title, scheduled_date' }, { status: 400 });
     }
-    if (notes !== undefined) {
-        // Update or insert into editorial_calendar
-        const exists = await query(`SELECT id FROM editorial_calendar WHERE blog_id = ?`, [id]);
-        if (exists.length) {
-            await query(`UPDATE editorial_calendar SET notes = ? WHERE blog_id = ?`, [notes, id]);
-        } else if (notes) {
-            await query(`INSERT INTO editorial_calendar (blog_id, notes, scheduled_date) VALUES (?, ?, (SELECT scheduled_for FROM blogs WHERE id = ?))`, [id, notes, id]);
+
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const postStatus = status || 'SCHEDULED';
+
+    const result = await query(`
+        INSERT INTO blogs (title, slug, status, author_id, scheduled_for, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+    `, [title, slug, postStatus, author_id || null, scheduled_date]);
+
+    const blogId = result.insertId;
+
+    // Try to add to editorial_calendar if table exists
+    if (notes) {
+        try {
+            await query(`
+                INSERT INTO editorial_calendar (blog_id, notes, scheduled_date)
+                VALUES (?, ?, ?)
+            `, [blogId, notes, scheduled_date]);
+        } catch {
+            // editorial_calendar table may not exist, ignore
         }
     }
 
-    return NextResponse.json({ success: true });
-}
-
-export async function DELETE(request, { params }) {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-    const { id } = await params;
-
-    if (!token) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    // Delete from editorial_calendar first (if exists)
-    await query(`DELETE FROM editorial_calendar WHERE blog_id = ?`, [id]);
-    // Delete blog (or archive)
-    await query(`UPDATE blogs SET status = 'ARCHIVED' WHERE id = ?`, [id]);
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, id: blogId });
 }

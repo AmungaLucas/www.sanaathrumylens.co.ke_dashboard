@@ -71,7 +71,7 @@ export async function POST(request) {
     const result = await query(`
         INSERT INTO blogs (title, slug, excerpt, content, featured_image, author_id, status, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-    `, [title, slug, excerpt, content, featured_image, authorId, status]);
+    `, [title, slug, excerpt || null, content, featured_image || null, authorId, status || 'DRAFT']);
 
     const blogId = result.insertId;
 

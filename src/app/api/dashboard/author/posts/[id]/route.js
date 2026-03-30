@@ -89,7 +89,7 @@ export async function PUT(request, { params }) {
         UPDATE blogs 
         SET title = ?, slug = ?, excerpt = ?, content = ?, featured_image = ?, status = ?, updated_at = NOW()
         WHERE id = ? AND author_id = ?
-    `, [title, slug, excerpt, content, featured_image, status, id, authorId]);
+    `, [title, slug, excerpt || null, content, featured_image || null, status, id, authorId]);
 
     // Update categories (delete existing, insert new)
     await query('DELETE FROM blog_categories WHERE blog_id = ?', [id]);

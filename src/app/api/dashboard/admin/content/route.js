@@ -19,7 +19,7 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN' && decoded.role !== 'EDITOR')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

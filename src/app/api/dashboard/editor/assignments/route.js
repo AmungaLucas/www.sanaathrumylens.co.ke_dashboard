@@ -65,7 +65,7 @@ export async function POST(request) {
     const result = await query(`
         INSERT INTO editorial_assignments (editor_id, author_id, topic, description, deadline, status)
         VALUES (?, ?, ?, ?, ?, 'PENDING')
-    `, [editorId, author_id, topic, description, deadline]);
+    `, [editorId, author_id, topic, description || null, deadline]);
 
     return NextResponse.json({ success: true, id: result.insertId });
 }

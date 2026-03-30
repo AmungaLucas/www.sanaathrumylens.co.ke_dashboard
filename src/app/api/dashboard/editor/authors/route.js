@@ -18,13 +18,19 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Whitelist allowed sort columns to prevent SQL injection
+    const allowedSortColumns = ['total_views', 'total_posts', 'total_likes', 'follower_count', 'name', 'created_at'];
+    const sortColumn = allowedSortColumns.includes(sort) ? sort : 'total_views';
+    const direction = sort === 'name' ? 'ASC' : 'DESC';
+
+    // Use backtick-escaped column name (safe because sortColumn is whitelisted)
     const authors = await query(`
         SELECT 
             id, name, email, slug, avatar_url, author_title, is_verified,
             total_posts, total_views, total_likes, follower_count
         FROM admin_users
         WHERE role IN ('AUTHOR', 'CONTRIBUTOR')
-        ORDER BY ${sort} DESC
+        ORDER BY \`${sortColumn}\` ${direction}
     `);
 
     return NextResponse.json(authors);
