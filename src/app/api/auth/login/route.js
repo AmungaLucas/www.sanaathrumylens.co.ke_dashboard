@@ -3,10 +3,35 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req) {
     try {
+        // Rate limiting: 5 attempts per minute
+        const ip = getClientIp(req);
+        const { success, retryAfter } = rateLimit(ip, 5, 60000);
+        if (!success) {
+            return NextResponse.json(
+                { error: 'Too many requests. Please try again later.' },
+                {
+                    status: 429,
+                    headers: { 'Retry-After': String(retryAfter) },
+                }
+            );
+        }
+
         const { email, password } = await req.json();
+
+        // Validate inputs
+        if (!email || !password) {
+            return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
+        }
 
         const users = await query('SELECT * FROM users WHERE email = ?', [email]);
 

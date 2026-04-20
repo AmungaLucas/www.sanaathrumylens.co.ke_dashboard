@@ -5,6 +5,20 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { generateUUID } from '@/lib/uuid';
 
+// Allowed image file types
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+const ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+]);
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Import query for audit logging
+import { query } from '@/lib/db';
+
 export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
@@ -43,11 +57,36 @@ export async function POST(request) {
         return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    // Validate file type by extension
+    const originalName = file.name;
+    const extension = originalName.split('.').pop().toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(extension)) {
+        return NextResponse.json(
+            { error: `Invalid file type. Allowed types: ${Array.from(ALLOWED_EXTENSIONS).join(', ')}` },
+            { status: 400 }
+        );
+    }
+
+    // Validate MIME type
+    const mimeType = file.type;
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+        return NextResponse.json(
+            { error: `Invalid MIME type: ${mimeType}. Allowed types: ${Array.from(ALLOWED_MIME_TYPES).join(', ')}` },
+            { status: 400 }
+        );
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const originalName = file.name;
-    const extension = originalName.split('.').pop();
+    // Validate file size (max 5MB)
+    if (buffer.length > MAX_FILE_SIZE) {
+        return NextResponse.json(
+            { error: `File is too large. Maximum size is 5MB. Your file is ${(buffer.length / (1024 * 1024)).toFixed(2)}MB.` },
+            { status: 400 }
+        );
+    }
+
     const filename = `${generateUUID()}.${extension}`;
     const uploadDir = join(process.cwd(), 'public', 'uploads');
     const filePath = join(uploadDir, filename);
@@ -74,6 +113,3 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, url, filename });
 }
-
-// Import query for audit logging
-import { query } from '@/lib/db';
