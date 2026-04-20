@@ -82,7 +82,6 @@ export async function verifyToken(token) {
         );
 
         if (!isValid) {
-            console.log('Invalid signature');
             return null;
         }
 
@@ -91,11 +90,9 @@ export async function verifyToken(token) {
 
         // Check expiration
         if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-            console.log('Token expired');
             return null;
         }
 
-        console.log('Token verified for user:', payload.userId);
         return payload;
     } catch (error) {
         console.error('Token verification error:', error.message);

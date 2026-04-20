@@ -684,7 +684,127 @@ CREATE TABLE author_activity (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- =============================================
--- 15. VIEWS
+-- 15. AUDIT & ADMIN LOGGING
+-- =============================================
+CREATE TABLE audit_logs (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    actor_id CHAR(36),
+    actor_type VARCHAR(50) NOT NULL COMMENT 'ADMIN, MODERATOR, SYSTEM',
+    action VARCHAR(100) NOT NULL COMMENT 'UPDATE, DELETE, activate, suspend, ban, etc.',
+    entity_type VARCHAR(100) NOT NULL COMMENT 'USER, BLOG, COMMENT, SYSTEM_SETTINGS, etc.',
+    entity_id CHAR(36) NULL,
+    old_values JSON NULL,
+    new_values JSON NULL,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (actor_id) REFERENCES admin_users (id) ON DELETE SET NULL,
+    INDEX idx_audit_logs_actor (actor_id),
+    INDEX idx_audit_logs_entity (entity_type, entity_id),
+    INDEX idx_audit_logs_action (action),
+    INDEX idx_audit_logs_created (created_at DESC)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 16. SYSTEM SETTINGS (KEY-VALUE STORE)
+-- =============================================
+CREATE TABLE system_settings (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT NOT NULL,
+    updated_by CHAR(36) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES admin_users (id) ON DELETE SET NULL,
+    INDEX idx_system_settings_key (setting_key),
+    INDEX idx_system_settings_updated (updated_at DESC)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 17. MODERATION ACTIONS
+-- =============================================
+CREATE TABLE moderation_actions (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    moderator_id CHAR(36) NOT NULL,
+    target_type VARCHAR(50) NOT NULL COMMENT 'COMMENT, BLOG, USER',
+    target_id CHAR(36) NOT NULL,
+    action_type VARCHAR(50) NOT NULL COMMENT 'approve, spam, trash, reject, changes_requested',
+    reason TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (moderator_id) REFERENCES admin_users (id) ON DELETE CASCADE,
+    INDEX idx_moderation_actions_moderator (moderator_id),
+    INDEX idx_moderation_actions_target (target_type, target_id),
+    INDEX idx_moderation_actions_type (action_type),
+    INDEX idx_moderation_actions_created (created_at DESC)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 18. EDITORIAL FEEDBACK
+-- =============================================
+CREATE TABLE editorial_feedback (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    blog_id CHAR(36) NOT NULL,
+    sender_id CHAR(36) NOT NULL COMMENT 'Editor who sends feedback',
+    recipient_id CHAR(36) NOT NULL COMMENT 'Author who receives feedback',
+    feedback_type VARCHAR(50) NOT NULL DEFAULT 'GENERAL' COMMENT 'GENERAL, CONTENT, STYLE, STRUCTURE, SEO',
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (blog_id) REFERENCES blogs (id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES admin_users (id) ON DELETE CASCADE,
+    FOREIGN KEY (recipient_id) REFERENCES admin_users (id) ON DELETE CASCADE,
+    INDEX idx_editorial_feedback_blog (blog_id),
+    INDEX idx_editorial_feedback_sender (sender_id),
+    INDEX idx_editorial_feedback_recipient (recipient_id),
+    INDEX idx_editorial_feedback_created (created_at DESC)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 19. EDITORIAL ASSIGNMENTS
+-- =============================================
+CREATE TABLE editorial_assignments (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    editor_id CHAR(36) NOT NULL COMMENT 'Editor who assigned the task',
+    author_id CHAR(36) NOT NULL COMMENT 'Author assigned to write',
+    blog_id CHAR(36) NULL COMMENT 'Linked blog once created',
+    topic VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    deadline DATE NOT NULL,
+    status ENUM (
+        'PENDING',
+        'ACCEPTED',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED'
+    ) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (editor_id) REFERENCES admin_users (id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES admin_users (id) ON DELETE CASCADE,
+    FOREIGN KEY (blog_id) REFERENCES blogs (id) ON DELETE SET NULL,
+    INDEX idx_editorial_assignments_editor (editor_id),
+    INDEX idx_editorial_assignments_author (author_id),
+    INDEX idx_editorial_assignments_blog (blog_id),
+    INDEX idx_editorial_assignments_status (status),
+    INDEX idx_editorial_assignments_deadline (deadline),
+    INDEX idx_editorial_assignments_created (created_at DESC)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 20. EDITORIAL CALENDAR
+-- =============================================
+CREATE TABLE editorial_calendar (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID ()),
+    blog_id CHAR(36) NOT NULL UNIQUE,
+    notes TEXT NULL,
+    scheduled_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (blog_id) REFERENCES blogs (id) ON DELETE CASCADE,
+    INDEX idx_editorial_calendar_blog (blog_id),
+    INDEX idx_editorial_calendar_date (scheduled_date)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =============================================
+-- 21. VIEWS
 -- =============================================
 -- Unified Users View
 CREATE
@@ -909,11 +1029,13 @@ GROUP BY
 -- =============================================
 -- SCHEMA COMPLETE
 -- =============================================
--- Version: 3.0 (UUID Edition)
--- Tables: 30+
+-- Version: 3.1 (UUID Edition — 6 new operational tables added)
+-- Tables: 36+
 -- Views: 3
 -- Compatible with: MariaDB 10.2+
 -- All primary keys use UUID() with default
+-- New tables: audit_logs, system_settings, moderation_actions,
+--             editorial_feedback, editorial_assignments, editorial_calendar
 -- =============================================
 SET
     FOREIGN_KEY_CHECKS = 1;
