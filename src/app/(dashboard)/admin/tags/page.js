@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 
 export default function TagsPage() {
@@ -47,11 +48,11 @@ export default function TagsPage() {
                 fetchTags();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to delete tag');
+                toast.error(error.error || 'Failed to delete tag');
             }
         } catch (error) {
             console.error('Error deleting tag:', error);
-            alert('Failed to delete tag');
+            toast.error('Failed to delete tag');
         }
     };
 

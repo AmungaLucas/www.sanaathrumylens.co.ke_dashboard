@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Flag, CheckCircle, XCircle, Eye, AlertTriangle, FileText, MessageCircle } from 'lucide-react';
 import StatusBadge from '../../_components/StatusBadge';
 
@@ -41,11 +42,11 @@ export default function ReportsPage() {
                 fetchReports();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to resolve report');
+                toast.error(error.error || 'Failed to resolve report');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to resolve report');
+            toast.error('Failed to resolve report');
         }
     };
 

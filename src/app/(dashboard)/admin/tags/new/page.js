@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export default function CreateTagPage() {
@@ -41,11 +42,11 @@ export default function CreateTagPage() {
                 router.push('/admin/tags');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to create tag');
+                toast.error(error.error || 'Failed to create tag');
             }
         } catch (error) {
             console.error('Error creating tag:', error);
-            alert('Failed to create tag');
+            toast.error('Failed to create tag');
         } finally {
             setLoading(false);
         }

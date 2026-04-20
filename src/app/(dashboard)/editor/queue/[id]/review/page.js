@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, CheckCircle, XCircle, Edit2, Send, Eye, AlertCircle } from 'lucide-react';
 import TipTapEditor from '@/app/(dashboard)/_components/TipTapEditor';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 export default function ReviewPostPage() {
     const router = useRouter();
@@ -28,7 +30,7 @@ export default function ReviewPostPage() {
                 const data = await res.json();
                 setPost(data);
             } else {
-                alert('Post not found');
+                toast.error('Post not found');
                 router.push('/editor/queue');
             }
         } catch (error) {
@@ -40,7 +42,7 @@ export default function ReviewPostPage() {
 
     const handleReviewAction = async (action) => {
         if (!feedback && action === 'changes_requested') {
-            alert('Please provide feedback for requested changes');
+            toast.warning('Please provide feedback for requested changes');
             return;
         }
 
@@ -56,11 +58,11 @@ export default function ReviewPostPage() {
                 router.push('/editor/queue');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Action failed');
+                toast.error(error.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         } finally {
             setSubmitting(false);
         }
@@ -148,7 +150,7 @@ export default function ReviewPostPage() {
                                 </div>
                             )}
 
-                            <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+                            <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
                         </div>
                     )}
 
@@ -158,7 +160,7 @@ export default function ReviewPostPage() {
                             <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                                 <p className="text-sm text-blue-700">This is a preview of how the post will appear on the live site</p>
                             </div>
-                            <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+                            <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
                         </div>
                     )}
 

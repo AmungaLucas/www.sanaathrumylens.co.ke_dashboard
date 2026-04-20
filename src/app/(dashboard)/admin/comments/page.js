@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { MessageCircle, CheckCircle, XCircle, Trash2, AlertCircle, Search } from 'lucide-react';
 
 export default function AdminCommentsPage() {
@@ -43,11 +44,11 @@ export default function AdminCommentsPage() {
             if (res.ok) fetchComments();
             else {
                 const err = await res.json();
-                alert(err.error || 'Action failed');
+                toast.error(err.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 

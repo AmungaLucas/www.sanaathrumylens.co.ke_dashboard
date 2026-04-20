@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, Filter, Edit, Ban, CheckCircle, Eye, Trash2 } from 'lucide-react';
 
 export default function UsersPage() {
@@ -40,11 +41,11 @@ export default function UsersPage() {
                 fetchUsers();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Action failed');
+                toast.error(error.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 

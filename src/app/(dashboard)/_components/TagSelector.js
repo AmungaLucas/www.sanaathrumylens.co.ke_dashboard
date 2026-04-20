@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { X, Plus } from 'lucide-react';
 
 export default function TagSelector({ selectedIds = [], onChange }) {
@@ -60,11 +61,11 @@ export default function TagSelector({ selectedIds = [], onChange }) {
                 setShowNewTagInput(false);
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to create tag');
+                toast.error(error.error || 'Failed to create tag');
             }
         } catch (error) {
             console.error('Error creating tag:', error);
-            alert('Failed to create tag');
+            toast.error('Failed to create tag');
         } finally {
             setCreating(false);
         }

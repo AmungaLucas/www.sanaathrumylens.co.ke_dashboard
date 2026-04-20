@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { CheckCircle, XCircle, Eye, MessageSquare, Clock } from 'lucide-react';
 import StatusBadge from '../../_components/StatusBadge';
 
@@ -41,11 +42,11 @@ export default function AppealsPage() {
                 fetchAppeals();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Action failed');
+                toast.error(error.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 

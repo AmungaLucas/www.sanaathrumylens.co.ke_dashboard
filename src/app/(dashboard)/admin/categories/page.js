@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
 
 export default function CategoriesPage() {
@@ -47,11 +48,11 @@ export default function CategoriesPage() {
                 fetchCategories();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to delete category');
+                toast.error(error.error || 'Failed to delete category');
             }
         } catch (error) {
             console.error('Error deleting category:', error);
-            alert('Failed to delete category');
+            toast.error('Failed to delete category');
         }
     };
 

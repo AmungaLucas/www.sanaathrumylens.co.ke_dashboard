@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Shield, UserCog, Ban, CheckCircle } from 'lucide-react';
 
 export default function AdminUsersPage() {
@@ -49,11 +50,11 @@ export default function AdminUsersPage() {
                 fetchAdmins();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to save');
+                toast.error(error.error || 'Failed to save');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to save');
+            toast.error('Failed to save');
         } finally {
             setSaving(false);
         }
@@ -66,11 +67,11 @@ export default function AdminUsersPage() {
             if (res.ok) {
                 fetchAdmins();
             } else {
-                alert('Failed to delete');
+                toast.error('Failed to delete');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to delete');
+            toast.error('Failed to delete');
         }
     };
 

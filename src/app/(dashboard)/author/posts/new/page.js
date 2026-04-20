@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save } from 'lucide-react';
 import TipTapEditor from '../../../_components/TipTapEditor';
 import StatusBadge from '../../../_components/StatusBadge';
@@ -66,11 +67,11 @@ export default function CreatePostPage() {
                 router.push('/author/posts');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to create post');
+                toast.error(error.error || 'Failed to create post');
             }
         } catch (error) {
             console.error('Error creating post:', error);
-            alert('Failed to create post');
+            toast.error('Failed to create post');
         } finally {
             setLoading(false);
         }

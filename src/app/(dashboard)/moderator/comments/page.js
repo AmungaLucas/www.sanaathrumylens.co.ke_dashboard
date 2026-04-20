@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { MessageCircle, CheckCircle, XCircle, Flag, Eye, Trash2, AlertCircle } from 'lucide-react';
 
 export default function CommentModerationPage() {
@@ -63,11 +64,11 @@ export default function CommentModerationPage() {
                 fetchComments();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Action failed');
+                toast.error(error.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 
@@ -89,11 +90,11 @@ export default function CommentModerationPage() {
                 fetchComments();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Bulk action failed');
+                toast.error(error.error || 'Bulk action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Bulk action failed');
+            toast.error('Bulk action failed');
         }
     };
 

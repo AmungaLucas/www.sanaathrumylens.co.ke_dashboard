@@ -25,8 +25,13 @@ export function rateLimit(ip, limit = 10, windowMs = 60000) {
 }
 
 // Helper to get client IP from request
-export function getClientIp(req) {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.headers.get('x-real-ip') || 'unknown';
+export function getClientIp(request) {
+  // Prefer direct connection IP, then fall back to x-forwarded-for
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    // Use only the first IP in the chain (set by the nearest proxy)
+    const firstIp = forwarded.split(',')[0].trim();
+    if (firstIp) return firstIp;
+  }
+  return 'unknown';
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Save, RefreshCw } from 'lucide-react';
 
 export default function SystemSettingsPage() {
@@ -37,13 +38,13 @@ export default function SystemSettingsPage() {
                 body: JSON.stringify(settings),
             });
             if (res.ok) {
-                alert('Settings saved');
+                toast.success('Settings saved');
             } else {
-                alert('Save failed');
+                toast.error('Save failed');
             }
         } catch (error) {
             console.error('Save error:', error);
-            alert('Save failed');
+            toast.error('Save failed');
         } finally {
             setSaving(false);
         }
@@ -86,7 +87,7 @@ export default function SystemSettingsPage() {
 
                 <div className="bg-white rounded-xl shadow-sm border p-6">
                     <h2 className="text-lg font-semibold mb-4">Cache Management</h2>
-                    <button onClick={async () => { await fetch('/api/dashboard/admin/cache/clear', { method: 'POST' }); alert('Cache cleared'); }} className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"><RefreshCw className="w-4 h-4" /> Clear Cache</button>
+                    <button onClick={async () => { await fetch('/api/dashboard/admin/cache/clear', { method: 'POST' }); toast.success('Cache cleared'); }} className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"><RefreshCw className="w-4 h-4" /> Clear Cache</button>
                 </div>
             </div>
         </div>

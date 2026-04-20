@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save, Trash2, Eye } from 'lucide-react';
 import TipTapEditor from '../../../../_components/TipTapEditor';
 import StatusBadge from '../../../../_components/StatusBadge';
@@ -45,12 +46,12 @@ export default function EditPostPage() {
                 setCategoryIds(post.category_ids || []);
                 setTagIds(post.tag_ids || []);
             } else {
-                alert('Post not found');
+                toast.error('Post not found');
                 router.push('/author/posts');
             }
         } catch (error) {
             console.error('Error fetching post:', error);
-            alert('Failed to load post');
+            toast.error('Failed to load post');
         } finally {
             setLoading(false);
         }
@@ -95,15 +96,15 @@ export default function EditPostPage() {
 
             if (res.ok) {
                 setStatus(finalStatus);
-                alert('Post updated successfully!');
+                toast.success('Post updated successfully!');
                 router.push('/author/posts');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to update post');
+                toast.error(error.error || 'Failed to update post');
             }
         } catch (error) {
             console.error('Error updating post:', error);
-            alert('Failed to update post');
+            toast.error('Failed to update post');
         } finally {
             setSaving(false);
         }
@@ -121,15 +122,15 @@ export default function EditPostPage() {
             });
 
             if (res.ok) {
-                alert('Post deleted successfully');
+                toast.success('Post deleted successfully');
                 router.push('/author/posts');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to delete post');
+                toast.error(error.error || 'Failed to delete post');
             }
         } catch (error) {
             console.error('Error deleting post:', error);
-            alert('Failed to delete post');
+            toast.error('Failed to delete post');
         } finally {
             setDeleting(false);
         }

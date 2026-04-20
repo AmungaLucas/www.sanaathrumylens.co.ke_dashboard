@@ -5,16 +5,17 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { generateUUID } from '@/lib/uuid';
 
-// Allowed image file types
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+// Allowed file types
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm']);
 const ALLOWED_MIME_TYPES = new Set([
     'image/jpeg',
     'image/png',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
+    'video/mp4',
+    'video/webm',
 ]);
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Import query for audit logging
 import { query } from '@/lib/db';
@@ -76,15 +77,30 @@ export async function POST(request) {
         );
     }
 
+    // Validate extension-MIME consistency
+    const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    const VIDEO_EXTENSIONS = new Set(['mp4', 'webm']);
+    if (IMAGE_EXTENSIONS.has(extension) && mimeType.startsWith('video/')) {
+        return NextResponse.json({ error: 'File extension does not match MIME type.' }, { status: 400 });
+    }
+    if (VIDEO_EXTENSIONS.has(extension) && mimeType.startsWith('image/')) {
+        return NextResponse.json({ error: 'File extension does not match MIME type.' }, { status: 400 });
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Validate file size (max 5MB)
+    // Validate file size (max 10MB)
     if (buffer.length > MAX_FILE_SIZE) {
         return NextResponse.json(
-            { error: `File is too large. Maximum size is 5MB. Your file is ${(buffer.length / (1024 * 1024)).toFixed(2)}MB.` },
+            { error: `File is too large. Maximum size is 10MB. Your file is ${(buffer.length / (1024 * 1024)).toFixed(2)}MB.` },
             { status: 400 }
         );
+    }
+
+    // Path traversal protection on original filename
+    if (originalName.includes('..') || originalName.includes('/') || originalName.includes('\\')) {
+        return NextResponse.json({ error: 'Invalid filename.' }, { status: 400 });
     }
 
     const filename = `${generateUUID()}.${extension}`;

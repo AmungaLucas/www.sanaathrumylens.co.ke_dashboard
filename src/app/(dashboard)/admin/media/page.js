@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Upload, Search, Trash2, Copy, Check } from 'lucide-react';
 
 export default function MediaLibraryPage() {
@@ -37,11 +38,11 @@ export default function MediaLibraryPage() {
             if (res.ok) {
                 fetchMedia();
             } else {
-                alert('Upload failed');
+                toast.error('Upload failed');
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Upload failed');
+            toast.error('Upload failed');
         } finally {
             setUploading(false);
         }
@@ -52,10 +53,10 @@ export default function MediaLibraryPage() {
         try {
             const res = await fetch(`/api/dashboard/admin/media/${id}`, { method: 'DELETE' });
             if (res.ok) fetchMedia();
-            else alert('Delete failed');
+            else toast.error('Delete failed');
         } catch (error) {
             console.error('Delete error:', error);
-            alert('Delete failed');
+            toast.error('Delete failed');
         }
     };
 

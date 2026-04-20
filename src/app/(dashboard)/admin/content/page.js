@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, Filter, Eye, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 
 export default function ContentOverviewPage() {
@@ -38,10 +39,10 @@ export default function ContentOverviewPage() {
                 body: JSON.stringify({ action, type }),
             });
             if (res.ok) fetchContent();
-            else alert('Action failed');
+            else toast.error('Action failed');
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 

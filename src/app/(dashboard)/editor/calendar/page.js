@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import {
     ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon,
     X, Save, Clock, User, AlertCircle
@@ -251,11 +252,11 @@ export default function EditorialCalendarPage() {
             if (res.ok) {
                 fetchCalendarData();
             } else {
-                alert('Failed to delete post');
+                toast.error('Failed to delete post');
             }
         } catch (error) {
             console.error('Error deleting post:', error);
-            alert('Failed to delete post');
+            toast.error('Failed to delete post');
         }
     };
 
@@ -277,11 +278,11 @@ export default function EditorialCalendarPage() {
                 fetchCalendarData();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to save');
+                toast.error(error.error || 'Failed to save');
             }
         } catch (error) {
             console.error('Error saving post:', error);
-            alert('Failed to save');
+            toast.error('Failed to save');
         } finally {
             setSaving(false);
         }

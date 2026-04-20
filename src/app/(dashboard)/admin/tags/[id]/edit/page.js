@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export default function EditTagPage() {
@@ -28,7 +29,7 @@ export default function EditTagPage() {
                 setSlug(tag.slug);
                 setDescription(tag.description || '');
             } else {
-                alert('Tag not found');
+                toast.error('Tag not found');
                 router.push('/admin/tags');
             }
         } catch (error) {
@@ -68,11 +69,11 @@ export default function EditTagPage() {
                 router.push('/admin/tags');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to update tag');
+                toast.error(error.error || 'Failed to update tag');
             }
         } catch (error) {
             console.error('Error updating tag:', error);
-            alert('Failed to update tag');
+            toast.error('Failed to update tag');
         } finally {
             setSaving(false);
         }

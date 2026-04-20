@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle, Eye, Shield, UserX, UserCheck } from 'lucide-react';
 import StatusBadge from '../../_components/StatusBadge';
 
@@ -39,11 +40,11 @@ export default function FlaggedUsersPage() {
                 fetchUsers();
             } else {
                 const error = await res.json();
-                alert(error.error || 'Action failed');
+                toast.error(error.error || 'Action failed');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Action failed');
+            toast.error('Action failed');
         }
     };
 

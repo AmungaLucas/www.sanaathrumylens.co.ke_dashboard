@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export default function EditCategoryPage() {
@@ -30,7 +31,7 @@ export default function EditCategoryPage() {
                 setDescription(category.description || '');
                 setIsActive(category.is_active);
             } else {
-                alert('Category not found');
+                toast.error('Category not found');
                 router.push('/admin/categories');
             }
         } catch (error) {
@@ -70,11 +71,11 @@ export default function EditCategoryPage() {
                 router.push('/admin/categories');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to update category');
+                toast.error(error.error || 'Failed to update category');
             }
         } catch (error) {
             console.error('Error updating category:', error);
-            alert('Failed to update category');
+            toast.error('Failed to update category');
         } finally {
             setSaving(false);
         }

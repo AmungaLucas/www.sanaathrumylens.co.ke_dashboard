@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, Save, User, Calendar } from 'lucide-react';
 
 export default function NewAssignmentPage() {
@@ -47,11 +48,11 @@ export default function NewAssignmentPage() {
                 router.push('/editor/assignments');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Failed to create assignment');
+                toast.error(error.error || 'Failed to create assignment');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to create assignment');
+            toast.error('Failed to create assignment');
         } finally {
             setLoading(false);
         }
