@@ -14,18 +14,23 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'editor' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // posts table does not have a scheduled_for column or 'SCHEDULED' status.
+    // Show draft posts that have a published_at date set (intended to be scheduled)
     const posts = await query(`
         SELECT
-            b.id, b.title, b.slug, b.status, b.scheduled_for, b.created_at,
-            a.name as author_name
-        FROM blogs b
-        JOIN admin_users a ON b.author_id = a.id
-        WHERE b.status = 'SCHEDULED' AND b.scheduled_for >= CURDATE()
-        ORDER BY b.scheduled_for ASC
+            p.id, p.title, p.slug, p.status, p.published_at, p.created_at,
+            u.display_name as author_name
+        FROM posts p
+        JOIN users u ON p.author_id = u.id
+        WHERE p.status = 'draft'
+          AND p.published_at IS NOT NULL
+          AND p.published_at >= CURDATE()
+          AND p.is_deleted = 0
+        ORDER BY p.published_at ASC
         LIMIT ?
     `, [limit]);
 

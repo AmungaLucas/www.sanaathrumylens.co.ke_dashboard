@@ -14,7 +14,7 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -30,7 +30,7 @@ export async function GET(request) {
     // User growth data
     const userGrowth = await query(`
         SELECT DATE(created_at) as date, COUNT(*) as users
-        FROM public_users
+        FROM users
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
         GROUP BY DATE(created_at)
         ORDER BY date ASC
@@ -38,40 +38,26 @@ export async function GET(request) {
 
     // Content performance
     const contentPerformance = await query(`
-        SELECT DATE(published_at) as date, SUM(view_count) as views, SUM(like_count) as likes
-        FROM blogs
-        WHERE status = 'PUBLISHED' AND published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        SELECT DATE(published_at) as date, SUM(stats_views) as views, SUM(stats_likes) as likes
+        FROM posts
+        WHERE status = 'published' AND is_deleted = 0 AND published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
         GROUP BY DATE(published_at)
         ORDER BY date ASC
     `, [days]);
 
-    // Traffic sources
-    const trafficSources = await query(`
-        SELECT 
-            CASE 
-                WHEN referrer LIKE '%google%' THEN 'Google'
-                WHEN referrer LIKE '%facebook%' THEN 'Facebook'
-                WHEN referrer LIKE '%twitter%' THEN 'Twitter'
-                WHEN referrer LIKE '%linkedin%' THEN 'LinkedIn'
-                WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
-                ELSE 'Other'
-            END as source,
-            COUNT(*) as value
-        FROM page_views
-        WHERE viewed_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-        GROUP BY source
-    `, [days]);
+    // Traffic sources - page_views table does not exist, return empty
+    const trafficSources = [];
 
     // Revenue data (placeholder - implement when payments table is added)
     const revenueData = [];
 
     // Top performing posts
     const topPosts = await query(`
-        SELECT b.id, b.title, b.slug, b.view_count, b.like_count, b.comment_count, a.name as author_name
-        FROM blogs b
-        LEFT JOIN admin_users a ON b.author_id = a.id
-        WHERE b.status = 'PUBLISHED'
-        ORDER BY b.view_count DESC
+        SELECT p.id, p.title, p.slug, p.stats_views as view_count, p.stats_likes as like_count, p.stats_comments as comment_count, u.display_name as author_name
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+        WHERE p.status = 'published' AND p.is_deleted = 0
+        ORDER BY p.stats_views DESC
         LIMIT 10
     `);
 

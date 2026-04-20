@@ -8,7 +8,6 @@ export async function GET(request) {
     const token = cookieStore.get('token')?.value;
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || 'all';
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 20;
     const offset = (page - 1) * limit;
@@ -18,22 +17,17 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    let sql = `SELECT id, name, email, username, avatar_url, status, created_at, last_login_at, comment_count, like_count, bookmark_count FROM public_users WHERE 1=1`;
+    let sql = `SELECT id, display_name as name, email, slug, avatar as avatar_url, created_at, last_login, bookmarks_count, likes_count, comments_count FROM users WHERE JSON_CONTAINS(roles, '"user"')`;
     const params = [];
 
     if (search) {
-        sql += ` AND (name LIKE ? OR email LIKE ? OR username LIKE ?)`;
+        sql += ` AND (display_name LIKE ? OR email LIKE ? OR slug LIKE ?)`;
         const searchTerm = `%${search}%`;
         params.push(searchTerm, searchTerm, searchTerm);
-    }
-
-    if (status !== 'all') {
-        sql += ` AND status = ?`;
-        params.push(status);
     }
 
     const countSql = `SELECT COUNT(*) as total FROM (${sql}) as t`;

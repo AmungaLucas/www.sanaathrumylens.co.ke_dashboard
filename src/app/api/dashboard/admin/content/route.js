@@ -19,7 +19,7 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN' && decoded.role !== 'EDITOR')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin' && decoded.role !== 'editor')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -27,26 +27,33 @@ export async function GET(request) {
 
     if (type === 'blog') {
         sql = `
-            SELECT b.id, b.title, b.slug, b.status, b.created_at, b.published_at, b.view_count, b.like_count, b.comment_count,
-                   a.name as author_name, a.slug as author_slug
-            FROM blogs b
-            LEFT JOIN admin_users a ON b.author_id = a.id
-            WHERE 1=1
+            SELECT p.id, p.title, p.slug, p.status, p.created_at, p.published_at, p.stats_views as view_count, p.stats_likes as like_count, p.stats_comments as comment_count,
+                   u.display_name as author_name, u.slug as author_slug
+            FROM posts p
+            LEFT JOIN users u ON p.author_id = u.id
+            WHERE p.is_deleted = 0
         `;
         if (search) {
-            sql += ` AND (b.title LIKE ? OR b.excerpt LIKE ?)`;
+            sql += ` AND (p.title LIKE ? OR p.excerpt LIKE ?)`;
             const searchTerm = `%${search}%`;
             params.push(searchTerm, searchTerm);
         }
         if (status !== 'all') {
-            sql += ` AND b.status = ?`;
-            params.push(status);
+            // Map frontend status values to actual lowercase enum values
+            const statusMap = {
+                'PUBLISHED': 'published',
+                'DRAFT': 'draft',
+                'ARCHIVED': 'archived',
+            };
+            const actualStatus = statusMap[status] || status.toLowerCase();
+            sql += ` AND p.status = ?`;
+            params.push(actualStatus);
         }
         countSql = `SELECT COUNT(*) as total FROM (${sql}) as t`;
-        sql += ` ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
+        sql += ` ORDER BY p.created_at DESC LIMIT ? OFFSET ?`;
     } else {
         sql = `
-            SELECT id, title, slug, status, created_at, event_date, location_name, is_online
+            SELECT id, title, slug, status, created_at, start_date, location, is_online
             FROM events
             WHERE 1=1
         `;
@@ -55,8 +62,14 @@ export async function GET(request) {
             params.push(`%${search}%`);
         }
         if (status !== 'all') {
+            const statusMap = {
+                'PUBLISHED': 'published',
+                'DRAFT': 'draft',
+                'ARCHIVED': 'archived',
+            };
+            const actualStatus = statusMap[status] || status.toLowerCase();
             sql += ` AND status = ?`;
-            params.push(status);
+            params.push(actualStatus);
         }
         countSql = `SELECT COUNT(*) as total FROM (${sql}) as t`;
         sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;

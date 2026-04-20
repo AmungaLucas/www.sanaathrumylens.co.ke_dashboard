@@ -16,21 +16,22 @@ export async function GET() {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {
         const activity = await query(`
-            (SELECT 'comment' as type, CONCAT('Comment on: ', b.title) as message, c.created_at
+            (SELECT 'comment' as type, CONCAT('Comment on: ', p.title) as message, c.created_at
              FROM comments c
-             LEFT JOIN blogs b ON c.blog_id = b.id
+             LEFT JOIN posts p ON c.post_id = p.id
+             WHERE c.is_deleted = 0
              ORDER BY c.created_at DESC LIMIT 5)
             UNION ALL
-            (SELECT 'report' as type, CONCAT('Report: ', reason, ' - ', content_type) as message, created_at
-             FROM content_reports
-             ORDER BY created_at DESC LIMIT 5)
+            (SELECT 'report' as type, CONCAT('Report on comment #', cr.comment_id) as message, cr.created_at
+             FROM comment_reports cr
+             ORDER BY cr.created_at DESC LIMIT 5)
             ORDER BY created_at DESC
             LIMIT 15
         `);

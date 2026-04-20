@@ -8,7 +8,7 @@ export async function POST(req) {
     try {
         const { email, password } = await req.json();
 
-        const users = await query('SELECT * FROM admin_users WHERE email = ?', [email]);
+        const users = await query('SELECT * FROM users WHERE email = ?', [email]);
 
         if (users.length === 0) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
@@ -16,28 +16,50 @@ export async function POST(req) {
 
         const user = users[0];
 
-        if (user.status !== 'ACTIVE') {
-            return NextResponse.json({ error: 'Account is not active' }, { status: 401 });
-        }
-
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
         }
 
-        // Generate token with UUID
-        const token = await generateToken(user.id, 'admin', user.role);
+        // Parse roles JSON array and determine primary role for the JWT
+        let roles = [];
+        try {
+            roles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
+        } catch {
+            roles = [];
+        }
 
-        await query('UPDATE admin_users SET last_login_at = NOW() WHERE id = ?', [user.id]);
+        // Determine primary role from the roles array for JWT token
+        // Priority: SUPER_ADMIN > ADMIN > EDITOR > MODERATOR > AUTHOR > user
+        const rolePriority = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'MODERATOR', 'AUTHOR'];
+        let primaryRole = 'author'; // default fallback
+        for (const r of rolePriority) {
+            if (roles.includes(r)) {
+                primaryRole = r.toLowerCase();
+                break;
+            }
+        }
+        // If no admin role found, check for 'user' role
+        if (primaryRole === 'author' && !roles.includes('AUTHOR')) {
+            if (roles.includes('user')) {
+                primaryRole = 'author'; // regular users access author dashboard
+            }
+        }
+
+        // Generate token with UUID and primary role
+        const token = await generateToken(user.id, 'admin', primaryRole);
+
+        await query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
 
         const response = NextResponse.json({
             success: true,
             user: {
                 id: user.id,
-                name: user.name,
+                name: user.display_name,
                 email: user.email,
-                avatar_url: user.avatar_url,
-                role: user.role,
+                avatar_url: user.avatar,
+                role: primaryRole,
+                roles: roles,
             },
         });
 

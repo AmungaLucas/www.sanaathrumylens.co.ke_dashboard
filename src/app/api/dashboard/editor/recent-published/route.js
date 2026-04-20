@@ -14,19 +14,20 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'editor' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const posts = await query(`
         SELECT
-            b.id, b.title, b.slug, b.status, b.published_at, b.created_at,
-            b.view_count, b.like_count, b.comment_count,
-            a.name as author_name
-        FROM blogs b
-        JOIN admin_users a ON b.author_id = a.id
-        WHERE b.status = 'PUBLISHED'
-        ORDER BY b.published_at DESC
+            p.id, p.title, p.slug, p.status, p.published_at, p.created_at,
+            p.stats_views as view_count, p.stats_likes as like_count, p.stats_comments as comment_count,
+            u.display_name as author_name
+        FROM posts p
+        JOIN users u ON p.author_id = u.id
+        WHERE p.status = 'published'
+          AND p.is_deleted = 0
+        ORDER BY p.published_at DESC
         LIMIT ?
     `, [limit]);
 

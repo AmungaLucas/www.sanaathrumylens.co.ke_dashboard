@@ -18,35 +18,41 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {
+        // Use comment_reports table instead of content_reports
         let sql = `
             SELECT 
-                r.id, r.content_type, r.content_id, r.reason, r.description, r.status,
-                r.created_at, r.reviewed_at, r.reviewed_by,
-                r.reporter_id,
-                pu.name as reporter_name,
-                CASE r.content_type
-                    WHEN 'BLOG' THEN (SELECT title FROM blogs WHERE id = r.content_id)
-                    WHEN 'COMMENT' THEN (SELECT content FROM comments WHERE id = r.content_id)
-                    ELSE 'Unknown Content'
-                END as content_title
-            FROM content_reports r
-            LEFT JOIN public_users pu ON r.reporter_id = pu.id
+                cr.id, cr.comment_id, cr.reporter_id, cr.reported_user_id, cr.status, cr.created_at,
+                u.display_name as reporter_name,
+                c.content as content_preview,
+                p.title as post_title
+            FROM comment_reports cr
+            LEFT JOIN users u ON cr.reporter_id = u.id
+            LEFT JOIN comments c ON cr.comment_id = c.id
+            LEFT JOIN posts p ON c.post_id = p.id
             WHERE 1=1
         `;
         const params = [];
 
         if (status !== 'all') {
-            sql += ` AND r.status = ?`;
-            params.push(status);
+            // Map uppercase statuses to actual lowercase enum values
+            const statusMap = {
+                'PENDING': 'pending',
+                'REVIEWED': 'reviewed',
+                'DISMISSED': 'dismissed',
+                'RESOLVED': 'reviewed',
+            };
+            const actualStatus = statusMap[status] || status.toLowerCase();
+            sql += ` AND cr.status = ?`;
+            params.push(actualStatus);
         }
 
-        sql += ` ORDER BY r.created_at DESC LIMIT 100`;
+        sql += ` ORDER BY cr.created_at DESC LIMIT 100`;
 
         const reports = await query(sql, params);
         return NextResponse.json(reports || []);

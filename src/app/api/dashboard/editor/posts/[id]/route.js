@@ -13,47 +13,51 @@ export async function GET(request, { params }) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'editor' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const [post] = await query(`
         SELECT
-            b.*, a.name as author_name, a.slug as author_slug, a.avatar_url as author_avatar
-        FROM blogs b
-        JOIN admin_users a ON b.author_id = a.id
-        WHERE b.id = ?
+            p.*, u.display_name as author_name, u.slug as author_slug, u.avatar as author_avatar
+        FROM posts p
+        JOIN users u ON p.author_id = u.id
+        WHERE p.id = ?
     `, [id]);
 
     if (!post) {
         return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    // Fetch categories for this post
+    // Parse JSON fields
     try {
-        const categories = await query(`
-            SELECT c.name, c.slug
-            FROM blog_categories bc
-            JOIN categories c ON bc.category_id = c.id
-            WHERE bc.blog_id = ?
-        `, [id]);
-        post.categories = categories.map(c => c.name);
+        post.category_ids = typeof post.category_ids === 'string' ? JSON.parse(post.category_ids) : (post.category_ids || []);
     } catch {
-        post.categories = [];
+        post.category_ids = [];
     }
-
-    // Fetch tags for this post
     try {
-        const tags = await query(`
-            SELECT t.name, t.slug
-            FROM blog_tags bt
-            JOIN tags t ON bt.tag_id = t.id
-            WHERE bt.blog_id = ?
-        `, [id]);
-        post.tags = tags.map(t => t.name);
+        post.tags = typeof post.tags === 'string' ? JSON.parse(post.tags) : (post.tags || []);
     } catch {
         post.tags = [];
     }
+
+    // Resolve category names from the JSON category_ids array
+    if (post.category_ids && post.category_ids.length > 0) {
+        try {
+            const placeholders = post.category_ids.map(() => '?').join(',');
+            const categoryRows = await query(`
+                SELECT id, name, slug FROM categories WHERE id IN (${placeholders})
+            `, [...post.category_ids]);
+            post.categories = categoryRows.map(c => c.name);
+        } catch {
+            post.categories = [];
+        }
+    } else {
+        post.categories = [];
+    }
+
+    // Tags are already parsed from JSON - just use them as string array
+    if (!Array.isArray(post.tags)) post.tags = [];
 
     return NextResponse.json(post);
 }

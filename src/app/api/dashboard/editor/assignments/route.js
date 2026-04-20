@@ -14,16 +14,15 @@ export async function GET(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'editor' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     let sql = `
         SELECT 
-            ea.*, a.name as author_name, b.id as blog_id
+            ea.*, u.display_name as author_name
         FROM editorial_assignments ea
-        JOIN admin_users a ON ea.author_id = a.id
-        LEFT JOIN blogs b ON b.id = ea.blog_id
+        LEFT JOIN users u ON ea.author_id = u.id
         WHERE 1=1
     `;
     const params = [];
@@ -52,7 +51,7 @@ export async function POST(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'EDITOR' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'editor' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

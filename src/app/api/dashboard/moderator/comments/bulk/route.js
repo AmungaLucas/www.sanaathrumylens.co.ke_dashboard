@@ -16,7 +16,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -34,9 +34,9 @@ export async function POST(request) {
         }
 
         const statusMap = {
-            approve: 'APPROVED',
-            spam: 'SPAM',
-            trash: 'TRASHED',
+            approve: 'visible',
+            spam: 'hidden',
+            trash: 'hidden',
         };
         const newStatus = statusMap[action];
 

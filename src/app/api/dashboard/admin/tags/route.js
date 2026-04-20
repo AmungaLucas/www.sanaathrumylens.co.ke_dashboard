@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getUserRole, isAllowed, verifyToken } from '@/lib/auth';
-import { query } from '@/lib/db';
-import { generateUUID } from '@/lib/uuid';
 
-// GET tags list
+// tags table does NOT exist in the live database.
+// Tags are stored as a JSON array in the posts table.
+// This endpoint returns a graceful empty response.
+
 export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
@@ -20,17 +21,11 @@ export async function GET() {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const tags = await query(`
-        SELECT id, name, slug, description, usage_count, created_at
-        FROM tags
-        ORDER BY name ASC
-    `);
-
-    return NextResponse.json(tags);
+    // Tags are stored as JSON in posts table, no separate tags table
+    return NextResponse.json([]);
 }
 
-// POST create tag with UUID
-export async function POST(request) {
+export async function POST() {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
@@ -45,25 +40,6 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { name, slug, description } = body;
-
-    if (!name || !slug) {
-        return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
-    }
-
-    // Check if slug exists
-    const existing = await query('SELECT id FROM tags WHERE slug = ?', [slug]);
-    if (existing.length > 0) {
-        return NextResponse.json({ error: 'Slug already exists' }, { status: 400 });
-    }
-
-    const tagId = generateUUID();
-
-    await query(`
-        INSERT INTO tags (id, name, slug, description)
-        VALUES (?, ?, ?, ?)
-    `, [tagId, name, slug, description || null]);
-
-    return NextResponse.json({ success: true, id: tagId });
+    // Tags are stored as JSON in posts table - cannot create separate tag entries
+    return NextResponse.json({ error: 'Tags are managed inline with posts' }, { status: 400 });
 }

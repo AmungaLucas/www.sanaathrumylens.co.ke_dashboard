@@ -14,13 +14,14 @@ export async function GET() {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const admins = await query(`
-        SELECT id, name, email, avatar_url, role, status, created_at, last_login_at, total_posts, total_views
-        FROM admin_users
+        SELECT id, display_name as name, email, avatar as avatar_url, roles, created_at, last_login
+        FROM users
+        WHERE JSON_CONTAINS(roles, '"ADMIN"') OR JSON_CONTAINS(roles, '"SUPER_ADMIN"') OR JSON_CONTAINS(roles, '"EDITOR"') OR JSON_CONTAINS(roles, '"MODERATOR"') OR JSON_CONTAINS(roles, '"AUTHOR"')
         ORDER BY created_at DESC
     `);
 
@@ -30,14 +31,14 @@ export async function GET() {
 export async function POST(request) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
-    const { name, email, role, status, password } = await request.json();
+    const { name, email, role, password } = await request.json();
 
     if (!token) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -45,7 +46,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const existing = await query(`SELECT id FROM admin_users WHERE email = ?`, [email]);
+    const existing = await query(`SELECT id FROM users WHERE email = ?`, [email]);
     if (existing.length > 0) {
         return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
     }
@@ -54,15 +55,19 @@ export async function POST(request) {
     const passwordHash = await bcrypt.hash(password, 10);
     const id = generateUUID();
 
+    // Build roles JSON array - role param is uppercase like 'AUTHOR', 'EDITOR', etc.
+    const roleUpper = (role || 'AUTHOR').toUpperCase();
+    const roles = JSON.stringify([roleUpper]);
+
     await query(`
-        INSERT INTO admin_users (id, name, email, slug, role, status, password_hash, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-    `, [id, name, email, slug, role || 'AUTHOR', status || 'ACTIVE', passwordHash]);
+        INSERT INTO users (id, display_name, email, slug, password_hash, roles, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+    `, [id, name, email, slug, passwordHash, roles]);
 
     // Log audit
     await query(`
         INSERT INTO audit_logs (actor_id, actor_type, action, entity_type, entity_id, new_values, ip_address)
-        VALUES (?, 'ADMIN', 'CREATE', 'ADMIN_USER', ?, ?, ?)
+        VALUES (?, 'ADMIN', 'CREATE', 'USER', ?, ?, ?)
     `, [decoded.userId, id, JSON.stringify({ name, email, role }), request.headers.get('x-forwarded-for') || 'unknown']);
 
     return NextResponse.json({ success: true, id });

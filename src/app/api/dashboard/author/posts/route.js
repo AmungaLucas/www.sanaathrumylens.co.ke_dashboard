@@ -22,13 +22,20 @@ export async function GET(request) {
 
     const authorId = decoded.userId;
 
-    let sql = `SELECT id, title, slug, status, view_count, like_count, comment_count, created_at 
-               FROM blogs WHERE author_id = ?`;
+    let sql = `SELECT id, title, slug, status, stats_views as view_count, stats_likes as like_count, stats_comments as comment_count, created_at 
+               FROM posts WHERE author_id = ? AND is_deleted = 0`;
     const params = [authorId];
 
     if (status && status !== 'all') {
+        // Map uppercase status to lowercase enum
+        const statusMap = {
+            'PUBLISHED': 'published',
+            'DRAFT': 'draft',
+            'ARCHIVED': 'archived',
+        };
+        const actualStatus = statusMap[status] || status.toLowerCase();
         sql += ` AND status = ?`;
-        params.push(status);
+        params.push(actualStatus);
     }
 
     sql += ` ORDER BY created_at DESC LIMIT ?`;
@@ -54,7 +61,7 @@ export async function POST(request) {
 
     const authorId = decoded.userId;
     const body = await request.json();
-    const { title, slug, excerpt, content, featured_image, status, category_ids, tag_ids } = body;
+    const { title, slug, excerpt, content, featured_image, status, category_ids, tags } = body;
 
     // Validate required fields
     if (!title || !slug || !content) {
@@ -62,33 +69,30 @@ export async function POST(request) {
     }
 
     // Check if slug already exists
-    const existing = await query('SELECT id FROM blogs WHERE slug = ?', [slug]);
+    const existing = await query('SELECT id FROM posts WHERE slug = ? AND is_deleted = 0', [slug]);
     if (existing.length > 0) {
         return NextResponse.json({ error: 'Slug already exists' }, { status: 400 });
     }
 
+    // Map status to lowercase
+    const statusMap = {
+        'PUBLISHED': 'published',
+        'DRAFT': 'draft',
+        'ARCHIVED': 'archived',
+    };
+    const actualStatus = statusMap[status] || (status ? status.toLowerCase() : 'draft');
+
+    // Build JSON arrays for category_ids and tags
+    const categoryIdsJson = category_ids ? JSON.stringify(category_ids) : null;
+    const tagsJson = tags ? (Array.isArray(tags) ? JSON.stringify(tags) : JSON.stringify([tags])) : null;
+
     // Insert post
     const result = await query(`
-        INSERT INTO blogs (title, slug, excerpt, content, featured_image, author_id, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-    `, [title, slug, excerpt || null, content, featured_image || null, authorId, status || 'DRAFT']);
+        INSERT INTO posts (title, slug, excerpt, content, featured_image, author_id, status, category_ids, tags, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `, [title, slug, excerpt || null, content, featured_image || null, authorId, actualStatus, categoryIdsJson, tagsJson]);
 
-    const blogId = result.insertId;
+    const postId = result.insertId;
 
-    // Add categories
-    if (category_ids && category_ids.length > 0) {
-        for (const categoryId of category_ids) {
-            await query('INSERT INTO blog_categories (blog_id, category_id) VALUES (?, ?)', [blogId, categoryId]);
-        }
-    }
-
-    // Add tags and update usage count
-    if (tag_ids && tag_ids.length > 0) {
-        for (const tagId of tag_ids) {
-            await query('INSERT INTO blog_tags (blog_id, tag_id) VALUES (?, ?)', [blogId, tagId]);
-            await query('UPDATE tags SET usage_count = usage_count + 1 WHERE id = ?', [tagId]);
-        }
-    }
-
-    return NextResponse.json({ success: true, id: blogId });
+    return NextResponse.json({ success: true, id: postId });
 }

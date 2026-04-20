@@ -19,15 +19,13 @@ export async function GET() {
     // Get active categories
     const categories = await query(`
         SELECT id, name, slug FROM categories 
-        WHERE is_active = TRUE 
+        WHERE is_active = 1 
         ORDER BY name ASC
     `);
 
-    // Get all tags
-    const tags = await query(`
-        SELECT id, name, slug, usage_count FROM tags 
-        ORDER BY name ASC
-    `);
+    // tags table does NOT exist in the live database.
+    // Tags are stored as JSON in posts.
+    const tags = [];
 
     return NextResponse.json({ categories, tags });
 }

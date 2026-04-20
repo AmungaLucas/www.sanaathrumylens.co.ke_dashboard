@@ -17,7 +17,7 @@ export async function GET() {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
     }
@@ -25,10 +25,8 @@ export async function GET() {
     try {
         const [stats] = await query(`
             SELECT
-                (SELECT COUNT(*) FROM comments WHERE status = 'PENDING') as pending_comments,
-                (SELECT COUNT(*) FROM content_reports WHERE status = 'PENDING') as pending_reports,
-                (SELECT COUNT(*) FROM content_reports WHERE status = 'PENDING' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) as spam_this_week,
-                (SELECT COUNT(*) FROM comments WHERE status = 'SPAM' AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) as spam_this_week
+                (SELECT COUNT(*) FROM comments WHERE status = 'pending' AND is_deleted = 0) as pending_comments,
+                (SELECT COUNT(*) FROM comment_reports WHERE status = 'pending') as pending_reports
         `);
 
         return NextResponse.json({
@@ -37,7 +35,7 @@ export async function GET() {
             active_warnings: 0,
             pending_appeals: 0,
             resolved_today: 0,
-            spam_this_week: (stats?.spam_this_week || 0) + (stats?.['spam_this_week(2)'] || 0),
+            spam_this_week: 0,
         });
     } catch (error) {
         console.error('Error fetching moderator stats:', error);

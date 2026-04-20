@@ -20,6 +20,8 @@ export async function GET() {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // categories table exists. blog_categories junction table does NOT exist.
+    // Instead, count posts that contain each category ID in their JSON category_ids array.
     const categories = await query(`
         SELECT
             c.id,
@@ -28,13 +30,19 @@ export async function GET() {
             c.description,
             c.is_active,
             c.created_at,
-            c.updated_at,
-            COUNT(bc.blog_id) AS post_count
+            c.updated_at
         FROM categories c
-        LEFT JOIN blog_categories bc ON bc.category_id = c.id
-        GROUP BY c.id, c.name, c.slug, c.description, c.is_active, c.created_at, c.updated_at
         ORDER BY c.name ASC
     `);
+
+    // Count posts per category using JSON_CONTAINS
+    for (const cat of categories) {
+        const [countResult] = await query(`
+            SELECT COUNT(*) as cnt FROM posts 
+            WHERE JSON_CONTAINS(category_ids, CAST(? AS CHAR)) AND is_deleted = 0
+        `, [String(cat.id)]);
+        cat.post_count = countResult?.cnt || 0;
+    }
 
     return NextResponse.json(categories);
 }

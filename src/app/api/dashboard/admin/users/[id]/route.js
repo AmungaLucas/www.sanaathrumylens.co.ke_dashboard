@@ -14,25 +14,28 @@ export async function PUT(request, { params }) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    let newStatus;
-    switch (action) {
-        case 'activate': newStatus = 'ACTIVE'; break;
-        case 'suspend': newStatus = 'SUSPENDED'; break;
-        case 'ban': newStatus = 'BANNED'; break;
-        default: return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    // Note: users table does not have a status column.
+    // Use moderation_actions table to track moderation actions.
+    const validActions = ['activate', 'suspend', 'ban', 'warn'];
+    if (!validActions.includes(action)) {
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    await query(`UPDATE public_users SET status = ? WHERE id = ?`, [newStatus, id]);
+    // Log the moderation action (actual suspension/ban would need app-level enforcement)
+    await query(`
+        INSERT INTO moderation_actions (moderator_id, target_type, target_id, action_type, reason)
+        VALUES (?, 'USER', ?, ?, ?)
+    `, [decoded.userId, id, action.toUpperCase(), `Admin action: ${action}`]);
 
     // Log audit
     await query(`
         INSERT INTO audit_logs (actor_id, actor_type, action, entity_type, entity_id, new_values, ip_address)
         VALUES (?, 'ADMIN', ?, 'USER', ?, ?, ?)
-    `, [decoded.userId, action, id, JSON.stringify({ status: newStatus }), request.headers.get('x-forwarded-for') || 'unknown']);
+    `, [decoded.userId, action, id, JSON.stringify({ action }), request.headers.get('x-forwarded-for') || 'unknown']);
 
     return NextResponse.json({ success: true });
 }

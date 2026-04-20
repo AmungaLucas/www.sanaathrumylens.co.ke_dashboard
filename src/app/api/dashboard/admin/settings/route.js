@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -23,10 +23,6 @@ export async function GET() {
         try {
             const parsed = JSON.parse(s.setting_value);
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                // Extract the actual value from wrapped formats:
-                // {"value": "Sanaa"} → "Sanaa"
-                // {"enabled": false} → false
-                // {"enabled": false, "message": "..."} → {"enabled": false, "message": "..."} (complex, keep as-is)
                 if ('value' in parsed && Object.keys(parsed).length <= 2) {
                     result[s.setting_key] = parsed.value;
                 } else if ('enabled' in parsed && Object.keys(parsed).length === 1) {
@@ -66,7 +62,7 @@ export async function PUT(request) {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

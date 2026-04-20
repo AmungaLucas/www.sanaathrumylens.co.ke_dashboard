@@ -19,10 +19,10 @@ export async function GET() {
     const authorId = decoded.userId;
 
     const posts = await query(`
-        SELECT id, title, view_count, like_count, comment_count
-        FROM blogs 
-        WHERE author_id = ? AND status = 'PUBLISHED'
-        ORDER BY view_count DESC
+        SELECT id, title, stats_views as view_count, stats_likes as like_count, stats_comments as comment_count
+        FROM posts 
+        WHERE author_id = ? AND status = 'published' AND is_deleted = 0
+        ORDER BY stats_views DESC
         LIMIT 5
     `, [authorId]);
 

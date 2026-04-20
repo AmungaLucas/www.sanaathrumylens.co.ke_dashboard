@@ -24,12 +24,13 @@ export async function GET(request) {
         SELECT 
             DATE(published_at) as date,
             COUNT(*) as posts,
-            SUM(view_count) as views,
-            SUM(like_count) as likes,
-            SUM(comment_count) as comments
-        FROM blogs 
+            SUM(stats_views) as views,
+            SUM(stats_likes) as likes,
+            SUM(stats_comments) as comments
+        FROM posts 
         WHERE author_id = ? 
-            AND status = 'PUBLISHED'
+            AND status = 'published'
+            AND is_deleted = 0
             AND published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
         GROUP BY DATE(published_at)
         ORDER BY date ASC

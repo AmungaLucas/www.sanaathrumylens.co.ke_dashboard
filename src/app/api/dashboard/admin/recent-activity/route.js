@@ -12,20 +12,20 @@ export async function GET() {
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'SUPER_ADMIN')) {
+    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {
         const activity = await query(`
             (SELECT 'post' as type, CONCAT('New post: ', title) as message, created_at
-             FROM blogs ORDER BY created_at DESC LIMIT 5)
+             FROM posts WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT 5)
             UNION ALL
-            (SELECT 'user' as type, CONCAT('New user: ', name) as message, created_at
-             FROM public_users ORDER BY created_at DESC LIMIT 5)
+            (SELECT 'user' as type, CONCAT('New user: ', display_name) as message, created_at
+             FROM users ORDER BY created_at DESC LIMIT 5)
             UNION ALL
-            (SELECT 'comment' as type, CONCAT('New comment by: ', author_name) as message, created_at
-             FROM comments ORDER BY created_at DESC LIMIT 5)
+            (SELECT 'comment' as type, CONCAT('New comment by: ', user_name) as message, created_at
+             FROM comments WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT 5)
             UNION ALL
             (SELECT 'settings' as type, CONCAT('Settings updated') as message, updated_at as created_at
              FROM system_settings ORDER BY updated_at DESC LIMIT 3)

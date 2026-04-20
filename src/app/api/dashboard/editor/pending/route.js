@@ -20,12 +20,13 @@ export async function GET() {
 
     const posts = await query(`
         SELECT 
-            b.id, b.title, b.slug, b.status, b.created_at,
-            a.name as author_name, a.slug as author_slug, a.avatar_url
-        FROM blogs b
-        JOIN admin_users a ON b.author_id = a.id
-        WHERE b.status = 'PENDING_REVIEW'
-        ORDER BY b.created_at ASC
+            p.id, p.title, p.slug, p.status, p.created_at,
+            u.display_name as author_name, u.slug as author_slug, u.avatar
+        FROM posts p
+        JOIN users u ON p.author_id = u.id
+        WHERE p.status = 'draft'
+          AND p.is_deleted = 0
+        ORDER BY p.created_at ASC
         LIMIT 20
     `);
 

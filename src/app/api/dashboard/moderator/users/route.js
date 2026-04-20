@@ -18,48 +18,40 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {
-        let sql, params;
+        let sql = `
+            SELECT 
+                u.id, u.display_name as name, u.email, u.slug, u.avatar as avatar_url,
+                u.created_at, u.last_login,
+                u.bookmarks_count, u.likes_count, u.comments_count
+            FROM users u
+            WHERE JSON_CONTAINS(u.roles, '"user"')
+        `;
+        const params = [];
 
         if (status === 'active') {
-            // Users with active warnings or flagged status
+            // Users who have been reported or have flagged comments
             sql = `
                 SELECT 
-                    u.id, u.name, u.email, u.username, u.avatar_url, u.status,
-                    u.created_at,
-                    (SELECT COUNT(*) FROM content_reports WHERE reporter_id = u.id AND status = 'PENDING') as total_reports,
-                    (SELECT COUNT(*) FROM comments WHERE user_id = u.id AND status = 'SPAM') as spam_comments
-                FROM public_users u
-                WHERE u.status IN ('ACTIVE', 'SUSPENDED', 'BANNED')
-                HAVING total_reports > 0 OR spam_comments > 0
+                    u.id, u.display_name as name, u.email, u.slug, u.avatar as avatar_url,
+                    u.created_at, u.last_login,
+                    u.bookmarks_count, u.likes_count, u.comments_count,
+                    (SELECT COUNT(*) FROM comment_reports WHERE reported_user_id = u.id AND status = 'pending') as total_reports
+                FROM users u
+                WHERE JSON_CONTAINS(u.roles, '"user"')
+                HAVING total_reports > 0
                 ORDER BY u.created_at DESC
                 LIMIT 50
             `;
             const users = await query(sql);
             return NextResponse.json(users || []);
         } else {
-            sql = `
-                SELECT 
-                    u.id, u.name, u.email, u.username, u.avatar_url, u.status,
-                    u.created_at, u.last_login_at,
-                    u.comment_count, u.like_count, u.bookmark_count,
-                    (SELECT COUNT(*) FROM content_reports WHERE reporter_id = u.id) as total_reports,
-                    (SELECT COUNT(*) FROM comments WHERE user_id = u.id AND status = 'SPAM') as spam_comments
-                FROM public_users u
-                WHERE 1=1
-            `;
-            if (status === 'suspended') {
-                sql += ` AND u.status = 'SUSPENDED'`;
-            } else if (status === 'banned') {
-                sql += ` AND u.status = 'BANNED'`;
-            }
             sql += ` ORDER BY u.created_at DESC LIMIT 50`;
-            params = [];
             const users = await query(sql, params);
             return NextResponse.json(users || []);
         }

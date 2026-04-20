@@ -20,7 +20,7 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
     }
@@ -29,21 +29,30 @@ export async function GET(request) {
         let sql = `
             SELECT 
                 c.id, c.content, c.status, c.created_at,
-                c.author_name, c.user_id,
-                u.avatar_url,
-                b.id as blog_id, b.title as blog_title, b.slug as blog_slug,
-                p.author_name as reply_to
+                c.user_name, c.user_id, c.user_avatar as avatar_url,
+                p.id as post_id, p.title as post_title, p.slug as post_slug,
+                parent.user_name as reply_to
             FROM comments c
-            LEFT JOIN public_users u ON c.user_id = u.id
-            LEFT JOIN blogs b ON c.blog_id = b.id
-            LEFT JOIN comments p ON c.parent_id = p.id
-            WHERE 1=1
+            LEFT JOIN users u ON c.user_id = u.id
+            LEFT JOIN posts p ON c.post_id = p.id
+            LEFT JOIN comments parent ON c.parent_id = parent.id
+            WHERE c.is_deleted = 0
         `;
         const params = [];
 
         if (status !== 'all') {
+            // Map uppercase statuses to actual lowercase enum values
+            const statusMap = {
+                'PENDING': 'pending',
+                'APPROVED': 'visible',
+                'VISIBLE': 'visible',
+                'HIDDEN': 'hidden',
+                'SPAM': 'hidden',
+                'TRASHED': 'hidden',
+            };
+            const actualStatus = statusMap[status] || status.toLowerCase();
             sql += ` AND c.status = ?`;
-            params.push(status);
+            params.push(actualStatus);
         }
 
         sql += ` ORDER BY c.created_at DESC LIMIT 100`;

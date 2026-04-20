@@ -21,14 +21,15 @@ export async function GET() {
     const [stats] = await query(`
         SELECT 
             COUNT(*) as total_posts,
-            SUM(CASE WHEN status = 'PUBLISHED' THEN 1 ELSE 0 END) as published_posts,
-            SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) as draft_posts,
-            SUM(CASE WHEN status = 'PENDING_REVIEW' THEN 1 ELSE 0 END) as pending_posts,
-            COALESCE(SUM(view_count), 0) as total_views,
-            COALESCE(SUM(like_count), 0) as total_likes,
-            COALESCE(SUM(comment_count), 0) as total_comments
-        FROM blogs 
+            SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published_posts,
+            SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_posts,
+            0 as pending_posts,
+            COALESCE(SUM(stats_views), 0) as total_views,
+            COALESCE(SUM(stats_likes), 0) as total_likes,
+            COALESCE(SUM(stats_comments), 0) as total_comments
+        FROM posts 
         WHERE author_id = ?
+          AND is_deleted = 0
     `, [authorId]);
 
     return NextResponse.json(stats);

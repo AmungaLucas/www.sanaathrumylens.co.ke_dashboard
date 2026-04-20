@@ -18,15 +18,16 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const allowedRoles = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    const allowedRoles = ['moderator', 'admin', 'super_admin'];
     if (!allowedRoles.includes(decoded.role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Map to actual comment_reports status enum values
     const statusMap = {
-        review: 'REVIEWED',
-        accept: 'RESOLVED',
-        reject: 'DISMISSED',
+        review: 'reviewed',
+        accept: 'reviewed',
+        reject: 'dismissed',
     };
 
     if (!statusMap[action]) {
@@ -35,8 +36,8 @@ export async function PUT(request, { params }) {
 
     try {
         await query(
-            `UPDATE content_reports SET status = ?, reviewed_at = NOW(), reviewed_by = ? WHERE id = ?`,
-            [statusMap[action], decoded.userId, id]
+            `UPDATE comment_reports SET status = ? WHERE id = ?`,
+            [statusMap[action], id]
         );
 
         return NextResponse.json({ success: true });

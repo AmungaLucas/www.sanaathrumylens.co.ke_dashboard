@@ -17,13 +17,35 @@ export async function GET() {
             return NextResponse.json({ error: 'Invalid token type' }, { status: 401 });
         }
 
-        const users = await query('SELECT id, name, email, avatar_url, role FROM admin_users WHERE id = ?', [decoded.userId]);
+        const users = await query('SELECT id, display_name as name, email, avatar as avatar_url, roles FROM users WHERE id = ?', [decoded.userId]);
 
         if (users.length === 0) {
             return NextResponse.json({ error: 'User not found' }, { status: 401 });
         }
 
-        return NextResponse.json(users[0]);
+        const user = users[0];
+
+        // Parse roles and determine primary role
+        let roles = [];
+        try {
+            roles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
+        } catch {
+            roles = [];
+        }
+
+        const rolePriority = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'MODERATOR', 'AUTHOR'];
+        let primaryRole = 'author';
+        for (const r of rolePriority) {
+            if (roles.includes(r)) {
+                primaryRole = r.toLowerCase();
+                break;
+            }
+        }
+
+        return NextResponse.json({
+            ...user,
+            role: primaryRole,
+        });
     } catch (error) {
         console.error('Auth me error:', error);
         return NextResponse.json({ error: 'Token verification failed' }, { status: 401 });
